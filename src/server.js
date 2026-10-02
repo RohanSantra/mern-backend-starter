@@ -6,6 +6,10 @@ import {
     disconnectDatabase
 } from "./config/index.js";
 
+import {
+    markShuttingDown
+} from "./core/runtime/index.js";
+
 /**
  * HTTP server instance.
  *
@@ -91,6 +95,8 @@ const gracefulShutdown = async (
     }
 
     isShuttingDown = true;
+
+    markShuttingDown();
 
     console.log(
         `${signal} received. Starting graceful shutdown...`

@@ -1,21 +1,115 @@
 import ApiResponse from "../../core/responses/ApiResponse.js";
-import AppError from "../../core/errors/AppError.js";
 
 import {
-    HTTP_STATUS,
-    ERROR_CODES
+    HTTP_STATUS
 } from "../../core/constants/index.js";
 
+import {
+    isDatabaseConnected
+} from "../../config/index.js";
+
+import {
+    isApplicationShuttingDown
+} from "../../core/runtime/index.js";
+
 /**
- * Returns a successful test response.
+ * Checks whether the application process is alive.
  *
- * Used to verify the complete successful request lifecycle:
+ * This endpoint intentionally does not check external
+ * dependencies such as MongoDB.
  *
- * Request
- * → Route
- * → Controller
- * → ApiResponse
- * → HTTP Response
+ * A successful response means the Node.js process is
+ * running and able to handle HTTP requests.
+ *
+ * @param {import("express").Request} req - Express request object.
+ * @param {import("express").Response} res - Express response object.
+ * @returns {import("express").Response} Liveness response.
+ */
+const liveness = (req, res) => {
+    return ApiResponse.ok(
+        res,
+        "Service is alive",
+        {
+            status: "alive"
+        }
+    );
+};
+
+/**
+ * Checks whether the application is ready to serve traffic.
+ *
+ * Readiness depends on:
+ *
+ * 1. The application not being in shutdown mode.
+ * 2. MongoDB being connected.
+ *
+ * If either condition fails, the application reports
+ * HTTP 503 Service Unavailable.
+ *
+ * @param {import("express").Request} req - Express request object.
+ * @param {import("express").Response} res - Express response object.
+ * @returns {import("express").Response} Readiness response.
+ */
+const readiness = (req, res) => {
+    const shuttingDown =
+        isApplicationShuttingDown();
+
+    const databaseConnected =
+        isDatabaseConnected();
+
+    if (shuttingDown) {
+        return res.status(
+            HTTP_STATUS.SERVICE_UNAVAILABLE
+        ).json({
+            success: false,
+            statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
+            message: "Service is shutting down",
+            data: {
+                status: "not_ready",
+                dependencies: {
+                    database: databaseConnected
+                        ? "available"
+                        : "unavailable"
+                }
+            },
+            requestId: req.requestId ?? null
+        });
+    }
+
+    if (!databaseConnected) {
+        return res.status(
+            HTTP_STATUS.SERVICE_UNAVAILABLE
+        ).json({
+            success: false,
+            statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
+            message: "Service is not ready",
+            data: {
+                status: "not_ready",
+                dependencies: {
+                    database: "unavailable"
+                }
+            },
+            requestId: req.requestId ?? null
+        });
+    }
+
+    return ApiResponse.ok(
+        res,
+        "Service is ready",
+        {
+            status: "ready",
+            dependencies: {
+                database: "available"
+            }
+        }
+    );
+};
+
+/**
+ * Test successful request handling.
+ *
+ * This temporary endpoint is used to validate the
+ * foundation request lifecycle.
  *
  * @param {import("express").Request} req - Express request object.
  * @param {import("express").Response} res - Express response object.
@@ -59,6 +153,8 @@ const testError = (req, res) => {
 };
 
 export {
+    liveness,
+    readiness,
     testSuccess,
     testError
 };

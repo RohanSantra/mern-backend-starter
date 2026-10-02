@@ -10,7 +10,8 @@ import {
     errorHandler,
     notFoundHandler,
     requestId,
-    createRateLimiter
+    createRateLimiter,
+    createRequestTimeout
 } from "./middleware/index.js";
 
 import {
@@ -96,6 +97,15 @@ const createApp = () => {
     app.use(globalRateLimiter);
 
     /**
+    * Global request Timeout.
+    */
+    const requestTimeout = createRequestTimeout(
+        30_000
+    );
+
+    app.use(requestTimeout);
+
+    /**
      * Parse JSON request bodies with a
      * deliberately conservative default limit.
      */
@@ -127,21 +137,21 @@ const createApp = () => {
      */
     app.use(cookieParser());
 
-    /**
-     * Basic service health endpoint.
-     */
-    app.get("/health", (req, res) => {
-        return res.status(200).json({
-            success: true,
-            statusCode: 200,
-            message: "Service is healthy",
-            data: {
-                status: "healthy",
-                environment: env.nodeEnv
-            },
-            requestId: req.requestId ?? null
-        });
-    });
+    // /**
+    //  * Basic service health endpoint.
+    //  */
+    // app.get("/health", (req, res) => {
+    //     return res.status(200).json({
+    //         success: true,
+    //         statusCode: 200,
+    //         message: "Service is healthy",
+    //         data: {
+    //             status: "healthy",
+    //             environment: env.nodeEnv
+    //         },
+    //         requestId: req.requestId ?? null
+    //     });
+    // });
 
     /**
      * Temporary foundation test routes.
