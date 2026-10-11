@@ -116,9 +116,17 @@ const normalizeError = (error) => {
         );
     }
 
-    /**
-     * Invalid JWT.
+
+    /*
+     * Optional authentication error handling.
+     *
+     * Enable these branches when the project implements JWT
+     * authentication and includes the corresponding error codes
+     * in src/core/constants/errorCodes.js.
      */
+
+    /*
+    // Invalid JWT.
     if (error?.name === "JsonWebTokenError") {
         return new AppError(
             "Invalid authentication token",
@@ -129,9 +137,7 @@ const normalizeError = (error) => {
         );
     }
 
-    /**
-     * Expired JWT.
-     */
+    // Expired JWT.
     if (error?.name === "TokenExpiredError") {
         return new AppError(
             "Authentication token has expired",
@@ -141,6 +147,9 @@ const normalizeError = (error) => {
             error
         );
     }
+    */
+
+
 
     /**
      * Unknown errors remain unchanged.

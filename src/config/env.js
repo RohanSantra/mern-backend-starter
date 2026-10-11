@@ -39,25 +39,25 @@ const getOptionalEnv = (name, defaultValue) => {
 };
 
 /**
- * Converts an environment variable into a number.
+ * Reads an optional numeric environment variable.
  *
  * @param {string} name - Name of the environment variable.
- * @param {number} defaultValue - Default numeric value.
- * @returns {number} Parsed numeric value.
- * @throws {Error} When the value is not a valid number.
+ * @param {number} defaultValue - Default value when the variable is unset or empty.
+ * @returns {number} Parsed finite numeric value.
+ * @throws {Error} When the provided value is not finite.
  */
 const getNumberEnv = (name, defaultValue) => {
     const value = process.env[name];
 
-    if (value === undefined || value === "") {
+    if (value === undefined || value.trim() === "") {
         return defaultValue;
     }
 
     const parsedValue = Number(value);
 
-    if (Number.isNaN(parsedValue)) {
+    if (!Number.isFinite(parsedValue)) {
         throw new Error(
-            `Environment variable ${name} must be a valid number`
+            `Environment variable ${name} must be a finite number`
         );
     }
 

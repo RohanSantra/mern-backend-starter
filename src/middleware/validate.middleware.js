@@ -8,15 +8,14 @@ import AppError from "../core/errors/AppError.js";
 /**
  * Creates request validation middleware from a Zod schema.
  *
- * Validated values are stored under `req.validated`
- * instead of replacing the original Express request
- * properties.
+ * Validated values are stored in req.validated rather than
+ * replacing Express request properties.
  *
- * This makes it explicit which values have passed
- * validation and sanitization.
+ * The schema should validate an object containing whichever
+ * request sections are enabled through the options.
  *
- * @param {Object} schema - Zod validation schema.
- * @param {Function} schema.parse - Zod parse function.
+ * @param {Object} schema - Zod schema.
+ * @param {Function} schema.parseAsync - Zod asynchronous parser.
  * @param {Object} [options] - Request sections to validate.
  * @param {boolean} [options.body=false] - Validate request body.
  * @param {boolean} [options.params=false] - Validate route parameters.
@@ -33,7 +32,39 @@ const validateRequest = (
         headers = false
     } = {}
 ) => {
-    return (req, res, next) => {
+    if (
+        !schema ||
+        typeof schema.parseAsync !== "function"
+    ) {
+        throw new TypeError(
+            "Validation schema must provide a parseAsync function."
+        );
+    }
+
+    const sections = {
+        body,
+        params,
+        query,
+        headers
+    };
+
+    if (
+        !Object.values(sections).every(
+            (enabled) => typeof enabled === "boolean"
+        )
+    ) {
+        throw new TypeError(
+            "Validation options must be booleans."
+        );
+    }
+
+    if (!Object.values(sections).some(Boolean)) {
+        throw new TypeError(
+            "At least one request section must be enabled for validation."
+        );
+    }
+
+    return async (req, res, next) => {
         try {
             const requestData = {};
 
@@ -53,14 +84,14 @@ const validateRequest = (
                 requestData.headers = req.headers;
             }
 
-            const validatedData = schema.parse(requestData);
+            const validatedData = await schema.parseAsync(requestData);
 
             req.validated = {
                 ...(req.validated || {}),
                 ...validatedData
             };
 
-            next();
+            return next();
         } catch (error) {
             if (error?.name === "ZodError") {
                 const details = error.issues.map((issue) => ({
@@ -81,7 +112,7 @@ const validateRequest = (
                 );
             }
 
-            next(error);
+            return next(error);
         }
     };
 };

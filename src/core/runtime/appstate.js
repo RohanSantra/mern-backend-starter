@@ -1,10 +1,8 @@
 /**
- * Runtime application state.
+ * Stores runtime state shared across the application process.
  *
- * This state contains information about the current
- * lifecycle of the application process.
- *
- * It is intentionally kept separate from configuration.
+ * Runtime state represents the current lifecycle of the running
+ * application and is kept separate from environment configuration.
  */
 const applicationState = {
     isShuttingDown: false
@@ -13,9 +11,8 @@ const applicationState = {
 /**
  * Marks the application as shutting down.
  *
- * Once this flag becomes true, readiness checks should
- * report that the application is no longer accepting
- * new traffic.
+ * Once shutdown begins, readiness checks should report that
+ * the application is no longer ready to receive new traffic.
  *
  * @returns {void}
  */
@@ -24,7 +21,7 @@ const markShuttingDown = () => {
 };
 
 /**
- * Returns whether the application is shutting down.
+ * Returns whether application shutdown has started.
  *
  * @returns {boolean} True when shutdown has started.
  */

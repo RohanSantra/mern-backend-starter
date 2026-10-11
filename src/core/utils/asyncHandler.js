@@ -1,13 +1,10 @@
 /**
  * Wraps an asynchronous Express request handler.
  *
- * Any rejected promise is automatically passed to
- * Express's global error-handling middleware.
+ * Rejected promises are forwarded to Express error-handling
+ * middleware, avoiding repetitive try/catch blocks in controllers.
  *
- * This prevents every controller from requiring
- * its own repetitive try/catch block.
- *
- * @param {Function} handler - Async Express request handler.
+ * @param {Function} handler - Express request handler.
  * @returns {import("express").RequestHandler} Wrapped request handler.
  */
 const asyncHandler = (handler) => {

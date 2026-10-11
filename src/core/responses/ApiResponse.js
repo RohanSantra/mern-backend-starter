@@ -1,17 +1,19 @@
 /**
- * Standard API response builder.
+ * Builds standardized successful API responses.
  *
- * All successful API responses should use this class
- * so that the frontend receives a predictable response
- * structure across every module.
+ * Use this class to keep the structure of successful responses
+ * consistent across application modules.
+ *
+ * Error responses are handled separately by the global
+ * error-handling middleware.
  */
 class ApiResponse {
     /**
-     * Creates a standardized API response.
+     * Creates a standardized API response object.
      *
      * @param {Object} options - Response configuration.
      * @param {number} options.statusCode - HTTP status code.
-     * @param {string} options.message - Human-readable message.
+     * @param {string} options.message - Human-readable response message.
      * @param {*} [options.data=null] - Response payload.
      * @param {*} [options.meta=null] - Optional response metadata.
      * @param {string|null} [options.requestId=null] - Request correlation ID.
@@ -37,7 +39,7 @@ class ApiResponse {
      * @param {import("express").Response} res - Express response object.
      * @param {Object} options - Response configuration.
      * @param {number} options.statusCode - HTTP status code.
-     * @param {string} options.message - Human-readable message.
+     * @param {string} options.message - Human-readable response message.
      * @param {*} [options.data=null] - Response payload.
      * @param {*} [options.meta=null] - Optional response metadata.
      * @returns {import("express").Response} Express response.
@@ -51,6 +53,17 @@ class ApiResponse {
             meta = null
         }
     ) {
+        if (
+            !Number.isInteger(statusCode) ||
+            statusCode < 200 ||
+            statusCode > 299 ||
+            statusCode === 204
+        ) {
+            throw new TypeError(
+                "ApiResponse.send requires a successful HTTP status code other than 204."
+            );
+        }
+
         return res.status(statusCode).json(
             new ApiResponse({
                 statusCode,
@@ -65,11 +78,11 @@ class ApiResponse {
     /**
      * Sends a 200 OK response.
      *
-     * @param {import("express").Response} res - Express response.
+     * @param {import("express").Response} res - Express response object.
      * @param {string} message - Response message.
-     * @param {*} [data=null] - Response data.
-     * @param {*} [meta=null] - Response metadata.
-     * @returns {import("express").Response}
+     * @param {*} [data=null] - Response payload.
+     * @param {*} [meta=null] - Optional response metadata.
+     * @returns {import("express").Response} Express response.
      */
     static ok(res, message, data = null, meta = null) {
         return ApiResponse.send(res, {
@@ -83,11 +96,13 @@ class ApiResponse {
     /**
      * Sends a 201 Created response.
      *
-     * @param {import("express").Response} res - Express response.
+     * Use this when a resource has been created successfully.
+     *
+     * @param {import("express").Response} res - Express response object.
      * @param {string} message - Response message.
      * @param {*} [data=null] - Created resource.
-     * @param {*} [meta=null] - Response metadata.
-     * @returns {import("express").Response}
+     * @param {*} [meta=null] - Optional response metadata.
+     * @returns {import("express").Response} Express response.
      */
     static created(res, message, data = null, meta = null) {
         return ApiResponse.send(res, {
@@ -101,14 +116,14 @@ class ApiResponse {
     /**
      * Sends a 202 Accepted response.
      *
-     * Useful for asynchronous operations that have
-     * been accepted but are not yet completed.
+     * Use this when a request has been accepted for processing
+     * but the requested operation has not necessarily completed.
      *
-     * @param {import("express").Response} res - Express response.
+     * @param {import("express").Response} res - Express response object.
      * @param {string} message - Response message.
-     * @param {*} [data=null] - Optional response data.
-     * @param {*} [meta=null] - Response metadata.
-     * @returns {import("express").Response}
+     * @param {*} [data=null] - Optional response payload.
+     * @param {*} [meta=null] - Optional response metadata.
+     * @returns {import("express").Response} Express response.
      */
     static accepted(res, message, data = null, meta = null) {
         return ApiResponse.send(res, {
@@ -122,8 +137,10 @@ class ApiResponse {
     /**
      * Sends a 204 No Content response.
      *
-     * @param {import("express").Response} res - Express response.
-     * @returns {import("express").Response}
+     * A 204 response must not contain a response body.
+     *
+     * @param {import("express").Response} res - Express response object.
+     * @returns {import("express").Response} Express response.
      */
     static noContent(res) {
         return res.status(204).send();

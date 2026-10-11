@@ -1,7 +1,8 @@
 import ApiResponse from "../../core/responses/ApiResponse.js";
 
 import {
-    HTTP_STATUS
+    HTTP_STATUS,
+    ERROR_CODES
 } from "../../core/constants/index.js";
 
 import {
@@ -15,14 +16,11 @@ import {
 /**
  * Checks whether the application process is alive.
  *
- * This endpoint intentionally does not check external
- * dependencies such as MongoDB.
+ * Liveness checks intentionally do not depend on database
+ * connectivity or optional infrastructure.
  *
- * A successful response means the Node.js process is
- * running and able to handle HTTP requests.
- *
- * @param {import("express").Request} req - Express request object.
- * @param {import("express").Response} res - Express response object.
+ * @param {import("express").Request} req - Express request.
+ * @param {import("express").Response} res - Express response.
  * @returns {import("express").Response} Liveness response.
  */
 const liveness = (req, res) => {
@@ -38,55 +36,62 @@ const liveness = (req, res) => {
 /**
  * Checks whether the application is ready to serve traffic.
  *
- * Readiness depends on:
+ * Readiness requires the application to be running normally
+ * and connected to MongoDB.
  *
- * 1. The application not being in shutdown mode.
- * 2. MongoDB being connected.
+ * Optional infrastructure checks can be added when a project
+ * integrates services such as Redis or other dependencies.
  *
- * If either condition fails, the application reports
- * HTTP 503 Service Unavailable.
- *
- * @param {import("express").Request} req - Express request object.
- * @param {import("express").Response} res - Express response object.
+ * @param {import("express").Request} req - Express request.
+ * @param {import("express").Response} res - Express response.
  * @returns {import("express").Response} Readiness response.
  */
 const readiness = (req, res) => {
-    const shuttingDown =
-        isApplicationShuttingDown();
+    const shuttingDown = isApplicationShuttingDown();
+    const databaseConnected = isDatabaseConnected();
 
-    const databaseConnected =
-        isDatabaseConnected();
+    const dependencies = {
+        database: databaseConnected
+            ? "available"
+            : "unavailable"
+    };
 
-    if (shuttingDown) {
+    /*
+     * Optional infrastructure readiness.
+     *
+     * Enable this section when the project implements an
+     * infrastructure readiness registry and exports
+     * getInfrastructureReadiness() from core/runtime/index.js.
+     *
+     * const infrastructure = getInfrastructureReadiness();
+     *
+     * Object.assign(
+     *     dependencies,
+     *     infrastructure.dependencies
+     * );
+     */
+
+    const dependenciesReady =
+        databaseConnected;
+        // Add infrastructure.ready to this condition when
+        // optional infrastructure readiness is implemented.
+
+    if (shuttingDown || !dependenciesReady) {
+        const message = shuttingDown
+            ? "Service is shutting down"
+            : "Service is not ready";
+
         return res.status(
             HTTP_STATUS.SERVICE_UNAVAILABLE
         ).json({
             success: false,
             statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
-            message: "Service is shutting down",
-            data: {
-                status: "not_ready",
-                dependencies: {
-                    database: databaseConnected
-                        ? "available"
-                        : "unavailable"
-                }
-            },
-            requestId: req.requestId ?? null
-        });
-    }
-
-    if (!databaseConnected) {
-        return res.status(
-            HTTP_STATUS.SERVICE_UNAVAILABLE
-        ).json({
-            success: false,
-            statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
-            message: "Service is not ready",
-            data: {
-                status: "not_ready",
-                dependencies: {
-                    database: "unavailable"
+            message,
+            error: {
+                code: ERROR_CODES.SERVICE_UNAVAILABLE,
+                details: {
+                    status: "not_ready",
+                    dependencies
                 }
             },
             requestId: req.requestId ?? null
@@ -98,63 +103,12 @@ const readiness = (req, res) => {
         "Service is ready",
         {
             status: "ready",
-            dependencies: {
-                database: "available"
-            }
-        }
-    );
-};
-
-/**
- * Test successful request handling.
- *
- * This temporary endpoint is used to validate the
- * foundation request lifecycle.
- *
- * @param {import("express").Request} req - Express request object.
- * @param {import("express").Response} res - Express response object.
- * @returns {import("express").Response} Successful API response.
- */
-const testSuccess = (req, res) => {
-    return ApiResponse.ok(
-        res,
-        "Test request completed successfully",
-        {
-            message: "Foundation is working correctly"
-        }
-    );
-};
-
-/**
- * Intentionally throws a controlled application error.
- *
- * Used to verify:
- *
- * Request
- * → Route
- * → Controller
- * → AppError
- * → Global error middleware
- * → Standardized error response
- *
- * @param {import("express").Request} req - Express request object.
- * @param {import("express").Response} res - Express response object.
- * @returns {never}
- */
-const testError = (req, res) => {
-    throw new AppError(
-        "This is an intentional test error",
-        HTTP_STATUS.BAD_REQUEST,
-        ERROR_CODES.INVALID_REQUEST,
-        {
-            reason: "Testing the global error-handling lifecycle"
+            dependencies
         }
     );
 };
 
 export {
     liveness,
-    readiness,
-    testSuccess,
-    testError
-};
+    readiness
+};  

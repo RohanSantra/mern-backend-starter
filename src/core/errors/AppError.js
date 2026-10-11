@@ -1,4 +1,3 @@
-
 import {
     HTTP_STATUS,
     ERROR_CODES
@@ -7,17 +6,14 @@ import {
 /**
  * Represents a controlled application error.
  *
- * AppError is used for expected failures that should
- * produce a known HTTP status and application error code.
+ * Use AppError for expected failures that should produce a
+ * known HTTP status code and application error code.
  *
- * Examples:
- * - Resource not found
- * - Invalid credentials
- * - Insufficient permissions
- * - Resource already exists
+ * Examples include missing resources, invalid requests,
+ * and conflicts with existing resources.
  *
- * Unexpected programming and system errors should not
- * be converted into operational errors automatically.
+ * Unexpected programming errors should remain ordinary errors
+ * so the global error handler can treat them as internal failures.
  *
  * @extends Error
  */
@@ -27,8 +23,8 @@ class AppError extends Error {
      *
      * @param {string} message - Human-readable error message.
      * @param {number} [statusCode=500] - HTTP status code.
-     * @param {string} [code] - Application error code.
-     * @param {unknown} [details=null] - Structured error details.
+     * @param {string} [code] - Application-specific error code.
+     * @param {*} [details=null] - Optional structured error details.
      * @param {Error|null} [cause=null] - Original underlying error.
      */
     constructor(
@@ -46,28 +42,27 @@ class AppError extends Error {
             statusCode > 599
         ) {
             throw new TypeError(
-                "AppError statusCode must be between 400 and 599"
+                "AppError statusCode must be an integer between 400 and 599."
             );
         }
 
         this.name = "AppError";
-
         this.statusCode = statusCode;
-
         this.code = code;
-
         this.details = details;
 
         /**
-         * Indicates that this error is an expected
+         * Indicates that the error represents an expected
          * application-level failure.
+         *
+         * The global error handler can use this property to
+         * distinguish controlled errors from unexpected errors.
+         *
+         * @type {boolean}
          */
         this.isOperational = true;
 
-        /**
-         * Exclude the constructor from the stack trace
-         * when supported by the Node.js runtime.
-         */
+        // Exclude the constructor call from the stack trace when supported.
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, AppError);
         }

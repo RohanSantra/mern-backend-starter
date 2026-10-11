@@ -2,9 +2,7 @@ import express from "express";
 
 import {
     liveness,
-    readiness,
-    testSuccess,
-    testError
+    readiness
 } from "./health.controller.js";
 
 import {
@@ -29,20 +27,5 @@ router.get(
     asyncHandler(readiness)
 );
 
-/**
- * Temporary successful request test.
- */
-router.get(
-    "/test-success",
-    asyncHandler(testSuccess)
-);
-
-/**
- * Temporary controlled error test.
- */
-router.get(
-    "/test-error",
-    asyncHandler(testError)
-);
 
 export default router;

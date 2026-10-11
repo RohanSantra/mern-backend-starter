@@ -14,9 +14,7 @@ import {
     createRequestTimeout
 } from "./middleware/index.js";
 
-import {
-    healthRoutes
-} from "./modules/health/index.js";
+import apiRoutes from "./routes/index.js";
 
 /**
  * Creates and configures the Express application.
@@ -137,31 +135,13 @@ const createApp = () => {
      */
     app.use(cookieParser());
 
-    // /**
-    //  * Basic service health endpoint.
-    //  */
-    // app.get("/health", (req, res) => {
-    //     return res.status(200).json({
-    //         success: true,
-    //         statusCode: 200,
-    //         message: "Service is healthy",
-    //         data: {
-    //             status: "healthy",
-    //             environment: env.nodeEnv
-    //         },
-    //         requestId: req.requestId ?? null
-    //     });
-    // });
 
-    /**
-     * Temporary foundation test routes.
-     *
-     * These will be removed after the foundation
-     * has been completely validated.
-     */
+    /** 
+     * Register API routes through the central route composition.
+    */
     app.use(
         `/api/${env.app.apiVersion}`,
-        healthRoutes
+        apiRoutes
     );
 
     /**
