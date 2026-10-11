@@ -1,12 +1,14 @@
+
 import mongoose from "mongoose";
 
 import env from "./env.js";
+import { logger } from "../core/utils/logger.js";
 
 /**
  * MongoDB connection options.
  *
- * These values prevent database operations and connection
- * attempts from remaining open indefinitely.
+ * These values prevent connection attempts and database
+ * operations from waiting indefinitely.
  */
 const MONGODB_OPTIONS = Object.freeze({
     serverSelectionTimeoutMS: 5000,
@@ -18,124 +20,85 @@ const MONGODB_OPTIONS = Object.freeze({
  * Handles successful MongoDB connections.
  */
 mongoose.connection.on("connected", () => {
-    console.log("MongoDB connected");
+    logger.info("MongoDB connected", {
+        host: mongoose.connection.host,
+        database: mongoose.connection.name
+    });
 });
 
 /**
- * Handles MongoDB connection errors that occur
- * during startup or after the connection is established.
+ * Handles MongoDB connection errors.
  *
  * @param {Error} error - MongoDB connection error.
  */
 mongoose.connection.on("error", (error) => {
-    console.error(
-        "MongoDB connection error:",
-        error.message
-    );
+    logger.error("MongoDB connection error", {
+        errorName: error.name,
+        errorMessage: error.message
+    });
 });
 
 /**
  * Handles MongoDB disconnection events.
- *
- * Readiness checks use the current Mongoose connection
- * state, so the API can report that it is not ready while
- * MongoDB is unavailable.
  */
 mongoose.connection.on("disconnected", () => {
-    console.warn(
-        "MongoDB disconnected"
-    );
+    logger.warn("MongoDB disconnected");
 });
 
 /**
  * Handles MongoDB connection attempts.
  */
 mongoose.connection.on("connecting", () => {
-    console.log(
-        "MongoDB connecting..."
-    );
+    logger.info("MongoDB connecting");
 });
 
 /**
- * Handles MongoDB reconnection attempts.
+ * Handles successful MongoDB reconnections.
  */
 mongoose.connection.on("reconnected", () => {
-    console.log(
-        "MongoDB reconnected"
-    );
+    logger.info("MongoDB reconnected");
 });
 
 /**
  * Establishes a connection to MongoDB.
  *
- * The HTTP server must successfully connect to MongoDB
+ * The HTTP server must connect to MongoDB successfully
  * before it starts accepting requests.
  *
- * Mongoose manages runtime connection recovery after
- * temporary disconnections.
+ * Mongoose manages reconnection after temporary
+ * network interruptions.
  *
  * @returns {Promise<typeof mongoose>} Connected Mongoose instance.
  * @throws {Error} When the initial database connection fails.
  */
 const connectDatabase = async () => {
-    try {
-        const connection = await mongoose.connect(
-            env.database.uri,
-            MONGODB_OPTIONS
-        );
-
-        console.log(
-            `MongoDB connected: ${connection.connection.host}/${connection.connection.name}`
-        );
-
-        return connection;
-    } catch (error) {
-        console.error(
-            "MongoDB initial connection failed:",
-            error.message
-        );
-
-        throw error;
-    }
+    return mongoose.connect(
+        env.database.uri,
+        MONGODB_OPTIONS
+    );
 };
 
 /**
  * Closes the active MongoDB connection.
  *
- * This is used during graceful application shutdown
- * to release the database connection cleanly.
+ * Used during graceful application shutdown.
  *
  * @returns {Promise<void>}
- * @throws {Error} When the database connection cannot be closed.
  */
 const disconnectDatabase = async () => {
-    try {
-        if (
-            mongoose.connection.readyState === 0
-        ) {
-            return;
-        }
-
-        await mongoose.connection.close();
-
-        console.log(
-            "MongoDB connection closed"
-        );
-    } catch (error) {
-        console.error(
-            "MongoDB disconnection failed:",
-            error.message
-        );
-
-        throw error;
+    if (mongoose.connection.readyState === 0) {
+        return;
     }
+
+    await mongoose.connection.close();
+
+    logger.info("MongoDB connection closed");
 };
 
 /**
  * Returns whether MongoDB is currently connected.
  *
  * Mongoose connection states:
- *
  * 0 = disconnected
  * 1 = connected
  * 2 = connecting
@@ -144,9 +107,7 @@ const disconnectDatabase = async () => {
  * @returns {boolean} True when MongoDB is connected.
  */
 const isDatabaseConnected = () => {
-    return (
-        mongoose.connection.readyState === 1
-    );
+    return mongoose.connection.readyState === 1;
 };
 
 export {

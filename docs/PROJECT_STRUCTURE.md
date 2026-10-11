@@ -140,6 +140,8 @@ mern-backend-starter/
 │   │   │
 │   │   └── utils/
 │   │       ├── asyncHandler.js
+│   │       ├── logger.js
+│   │       ├── timeFormat.js
 │   │       ├── retry.js
 │   │       └── index.js
 │   │
@@ -418,6 +420,8 @@ This is an illustrative example. The server should normally establish the databa
 
 Database connection logic should not be duplicated inside individual controllers.
 
+MongoDB lifecycle events use the shared logger from `src/core/utils/logger.js`. This keeps database logs consistent with server lifecycle logs and application error logs. Timestamp formatting is handled centrally by `timeFormat.js`, rather than being duplicated in the database configuration.
+
 ## 5.3 `index.js`
 
 **Purpose:** Provide a single import location for configuration exports.
@@ -645,6 +649,8 @@ Location: `src/core/utils/`
 utils/
 ├── asyncHandler.js
 ├── retry.js
+├── logger.js
+├── timeFormat.js
 └── index.js
 ```
 
@@ -679,6 +685,66 @@ Potential use cases include:
 Retries should be limited and should use an appropriate delay.
 
 **Important:** Do not retry every failure. Validation errors and most other client errors will not become successful simply by repeating the same request. Retrying a write operation can also create duplicate side effects unless that operation is designed to be safe to retry.
+
+
+### `logger.js`
+
+**Purpose:** Provide centralized application logging.
+
+Responsibilities include:
+
+- Logging informational messages, warnings, and errors.
+- Formatting log output consistently across application modules.
+- Producing readable logs during development.
+- Producing structured JSON logs in production.
+- Including relevant metadata, such as request IDs, HTTP methods, paths, and error details.
+- Using the shared timestamp formatter for consistent date and time formatting.
+
+Use the shared logger instead of calling `console.log()`, `console.warn()`, or `console.error()` directly throughout application code.
+
+Example:
+
+```js
+import { logger } from "../../core/utils/logger.js";
+
+logger.info("Application started", {
+    port: 5000
+});
+
+logger.error("Database operation failed", {
+    errorMessage: error.message
+});
+```
+
+### `timeFormat.js`
+
+**Purpose:** Provide reusable date and time formatting.
+
+Responsibilities include:
+
+- Formatting JavaScript dates into a human-readable representation.
+- Using the configured time zone for consistent timestamps.
+- Keeping timestamp formatting logic separate from logging logic.
+
+The current implementation formats timestamps using Indian Standard Time (`Asia/Kolkata`).
+
+Example:
+
+```js
+import { formatTimestamp } from "./index.js";
+
+const timestamp = formatTimestamp();
+
+console.log(timestamp);
+```
+
+Example output:
+
+```text
+11 Oct 2026, 05:45:30 PM IST
+```
+
+The logger uses this utility automatically, so other modules do not need to format timestamps independently.
 
 ### `index.js`
 
@@ -991,6 +1057,8 @@ Responsibilities generally include:
 6. Stop accepting new connections during shutdown.
 7. Close database connections.
 8. Exit cleanly after shutdown, or report a shutdown failure.
+9. Logging server startup and shutdown events.
+10. Logging unexpected server errors and unhandled process failures through the shared logger.
 
 Keeping this separate from `app.js` makes the Express application easier to test without automatically starting a listening server.
 

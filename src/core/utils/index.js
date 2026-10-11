@@ -3,9 +3,13 @@
  */
 export {
     default as asyncHandler
-} from "./asyncHandler.js"; 
+} from "./asyncHandler.js";
 
 export {
     retry,
     isRetryableError
 } from "./retry.js";
+
+export { logger } from "./logger.js";
+
+export { formatTimestamp } from "./timeFormat.js";

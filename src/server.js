@@ -7,8 +7,11 @@ import {
 } from "./config/index.js";
 
 import {
-    markShuttingDown
+    markShuttingDown,
+    isApplicationShuttingDown
 } from "./core/runtime/index.js";
+
+import { logger } from "./core/utils/logger.js";
 
 /**
  * HTTP server instance.
@@ -17,12 +20,6 @@ import {
  * shutdown handler can access it.
  */
 let server = null;
-
-/**
- * Prevents multiple shutdown sequences from
- * executing simultaneously.
- */
-let isShuttingDown = false;
 
 /**
  * Maximum amount of time allowed for graceful shutdown.
@@ -44,26 +41,32 @@ const startServer = async () => {
         server = app.listen(
             env.app.port,
             () => {
-                console.log(
-                    `${env.app.name} API running on port ${env.app.port}`
-                );
+                logger.info("HTTP server started", {
+                    appName: env.app.name,
+                    port: env.app.port,
+                    environment: env.app.nodeEnv
+                });
             }
         );
 
         /**
-         * Handles HTTP server errors that occur after startup.
+         * Handles HTTP server errors that occur after
+         * the server instance has been created.
          */
         server.on("error", (error) => {
-            console.error(
-                "HTTP server error:",
-                error
-            );
+            logger.error("HTTP server error", {
+                errorName: error.name,
+                errorMessage: error.message,
+                stack: error.stack
+            });
+
+            void gracefulShutdown("HTTP_SERVER_ERROR", 1);
         });
     } catch (error) {
-        console.error(
-            "Application startup failed:",
-            error
-        );
+        logger.error("Application startup failed", {
+            errorName: error.name,
+            errorMessage: error.message
+        });
 
         process.exit(1);
     }
@@ -72,69 +75,68 @@ const startServer = async () => {
 /**
  * Gracefully shuts down the application.
  *
- * Shutdown sequence:
- *
- * 1. Prevent duplicate shutdown attempts.
- * 2. Stop accepting new HTTP connections.
- * 3. Close the MongoDB connection.
- * 4. Exit the process.
- *
- * A timeout prevents the application from remaining
- * stuck during shutdown indefinitely.
+ * The shared runtime state prevents multiple shutdown
+ * sequences from executing simultaneously.
  *
  * @param {string} signal - Shutdown signal or failure source.
  * @param {number} [exitCode=0] - Process exit code.
  * @returns {Promise<void>}
  */
-const gracefulShutdown = async (
-    signal,
-    exitCode = 0
-) => {
-    if (isShuttingDown) {
+const gracefulShutdown = async (signal, exitCode = 0) => {
+    if (isApplicationShuttingDown()) {
         return;
     }
 
-    isShuttingDown = true;
-
     markShuttingDown();
 
-    console.log(
-        `${signal} received. Starting graceful shutdown...`
-    );
+    logger.info("Graceful shutdown initiated", {
+        signal,
+        exitCode
+    });
 
     const shutdownTimer = setTimeout(() => {
-        console.error(
-            "Graceful shutdown timed out. Forcing process termination."
-        );
+        logger.error("Graceful shutdown timed out", {
+            timeoutMs: SHUTDOWN_TIMEOUT
+        });
 
         process.exit(1);
     }, SHUTDOWN_TIMEOUT);
 
     try {
-        if (server) {
-            server.close();
+        if (server?.listening) {
+            await new Promise((resolve, reject) => {
+                server.close((error) => {
+                    if (error) {
+                        reject(error);
+                        return;
+                    }
 
-            console.log(
-                "HTTP server stopped accepting new connections."
-            );
+                    resolve();
+                });
+            });
+
+            logger.info("HTTP server closed successfully");
         }
 
         await disconnectDatabase();
 
         clearTimeout(shutdownTimer);
 
-        console.log(
-            "Application shutdown completed successfully."
-        );
+        logger.info("Application shutdown completed", {
+            signal,
+            exitCode
+        });
 
         process.exit(exitCode);
     } catch (error) {
         clearTimeout(shutdownTimer);
 
-        console.error(
-            "Error during graceful shutdown:",
-            error
-        );
+        logger.error("Graceful shutdown failed", {
+            signal,
+            errorName: error.name,
+            errorMessage: error.message,
+            stack: error.stack
+        });
 
         process.exit(1);
     }
@@ -144,52 +146,45 @@ const gracefulShutdown = async (
  * Handles operating-system shutdown signals.
  */
 process.on("SIGINT", () => {
-    gracefulShutdown("SIGINT");
+    void gracefulShutdown("SIGINT");
 });
 
 process.on("SIGTERM", () => {
-    gracefulShutdown("SIGTERM");
+    void gracefulShutdown("SIGTERM");
 });
 
 /**
- * An unhandled promise rejection indicates that
- * the application reached an unexpected state.
- *
- * The process is shut down so that the runtime can
- * be restarted by the process manager or container.
+ * Handles unhandled promise rejections.
  */
 process.on("unhandledRejection", (reason) => {
-    console.error(
-        "Unhandled promise rejection:",
-        reason
-    );
+    logger.error("Unhandled promise rejection", {
+        reason:
+            reason instanceof Error
+                ? reason.message
+                : String(reason),
+        stack:
+            reason instanceof Error
+                ? reason.stack
+                : undefined
+    });
 
-    gracefulShutdown(
-        "UNHANDLED_REJECTION",
-        1
-    );
+    void gracefulShutdown("UNHANDLED_REJECTION", 1);
 });
 
 /**
- * An uncaught exception leaves the application in an
- * potentially unsafe state.
- *
- * The process is therefore terminated after attempting
- * a graceful shutdown.
+ * Handles uncaught exceptions.
  */
 process.on("uncaughtException", (error) => {
-    console.error(
-        "Uncaught exception:",
-        error
-    );
+    logger.error("Uncaught exception", {
+        errorName: error.name,
+        errorMessage: error.message,
+        stack: error.stack
+    });
 
-    gracefulShutdown(
-        "UNCAUGHT_EXCEPTION",
-        1
-    );
+    void gracefulShutdown("UNCAUGHT_EXCEPTION", 1);
 });
 
 /**
  * Start the application.
  */
-startServer();
+void startServer();

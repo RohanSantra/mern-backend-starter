@@ -8,6 +8,8 @@ import {
     ERROR_CODES
 } from "../core/constants/index.js";
 
+import { logger } from "../core/utils/index.js";
+
 /**
  * Normalizes known errors into AppError instances.
  *
@@ -222,16 +224,28 @@ const errorHandler = (error, req, res, next) => {
         : normalizedError.details ?? null;
 
     /**
-     * Log unexpected errors.
+     * Log unexpected failures with request context.
      *
-     * Replace console.error with the centralized
-     * application logger when it is implemented.
+     * Operational client errors are not logged here unless
+     * they indicate a server-side failure.
+     *
+     * Do not log request bodies, credentials, tokens,
+     * or other sensitive information.
      */
     if (!isOperational || isInternalError) {
-        console.error(
-            "Application error:",
-            normalizedError
-        );
+        logger.error("Request failed", {
+            requestId: req.requestId ?? null,
+            method: req.method,
+            path: req.path,
+            statusCode,
+            errorCode: code,
+            errorName: normalizedError?.name ?? "Error",
+            errorMessage:
+                normalizedError?.message ?? "Unknown error",
+            ...(isInternalError && normalizedError?.stack
+                ? { stack: normalizedError.stack }
+                : {})
+        });
     }
 
     /**

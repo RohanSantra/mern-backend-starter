@@ -22,6 +22,7 @@ The goal is to avoid rebuilding common backend infrastructure for every project 
 - [Request Lifecycle](#request-lifecycle)
 - [Adding a New Feature](#adding-a-new-feature)
 - [Error Handling](#error-handling)
+- [Logging](#logging)
 - [API Response Format](#api-response-format)
 - [Security Practices](#security-practices)
 - [Testing and Code Quality](#testing-and-code-quality)
@@ -103,6 +104,10 @@ The starter follows a modular architecture. Core infrastructure is shared across
 - Graceful server shutdown
 - Database shutdown handling
 - Retry utility for selected transient failures
+- Centralized application logging
+- Readable date and time formatting using IST
+- Structured JSON logs in production
+- Request ID and error metadata in logs
 
 ### Development
 
@@ -110,6 +115,8 @@ The starter follows a modular architecture. Core infrastructure is shared across
 - ESLint flat configuration
 - Nodemon for development
 - Feature-based architecture
+- Consistent logging across application modules
+- Human-readable development logs
 
 ---
 
@@ -288,29 +295,69 @@ The project is organized into shared infrastructure, reusable middleware, and fe
 
 ```text
 mern-backend-starter/
+│
 ├── docs/
 │   └── PROJECT_STRUCTURE.md
+│
 ├── src/
+│   │
 │   ├── config/
 │   │   ├── env.js
 │   │   ├── db.js
 │   │   └── index.js
+│   │
 │   ├── core/
 │   │   ├── constants/
+│   │   │   ├── errorCodes.js
+│   │   │   ├── httpStatus.js
+│   │   │   └── index.js
+│   │   │
 │   │   ├── errors/
+│   │   │   ├── AppError.js
+│   │   │   └── index.js
+│   │   │
 │   │   ├── responses/
+│   │   │   ├── ApiResponse.js
+│   │   │   └── index.js
+│   │   │
 │   │   ├── runtime/
+│   │   │   ├── appState.js
+│   │   │   └── index.js
+│   │   │
 │   │   └── utils/
+│   │       ├── asyncHandler.js
+│   │       ├── logger.js
+│   │       ├── timeFormat.js
+│   │       ├── retry.js
+│   │       └── index.js
+│   │
 │   ├── middleware/
+│   │   ├── requestId.middleware.js
+│   │   ├── validate.middleware.js
+│   │   ├── rateLimit.middleware.js
+│   │   ├── requestTimeout.middleware.js
+│   │   ├── error.middleware.js
+│   │   ├── notFound.middleware.js
+│   │   └── index.js
+│   │
 │   ├── modules/
 │   │   └── health/
+│   │       ├── health.controller.js
+│   │       ├── health.routes.js
+│   │       └── index.js
+│   │
 │   ├── routes/
 │   │   └── index.js
+│   │
 │   ├── app.js
 │   └── server.js
+│
 ├── tests/
 │   ├── unit/
+│   │   └── .gitkeep
 │   └── integration/
+│       └── .gitkeep
+│
 ├── .env
 ├── .env.example
 ├── .gitignore
@@ -329,7 +376,7 @@ mern-backend-starter/
 | `core/errors/` | Application error definitions |
 | `core/responses/` | Standardized API response utilities |
 | `core/runtime/` | Application runtime state |
-| `core/utils/` | Reusable utilities such as async handlers and retry logic |
+| `core/utils/` | Reusable utilities, including async handlers, retry logic, centralized logging, and timestamp formatting |
 | `middleware/` | Request processing, validation, security-related policies, and error handling |
 | `modules/` | Independent application features |
 | `routes/` | Central API route composition |
@@ -436,6 +483,66 @@ Typical errors include:
 In production, internal stack traces and sensitive implementation details should not be returned to clients.
 
 ---
+
+## Logging
+
+The starter provides a centralized logging utility at `src/core/utils/logger.js` to maintain consistent logging across application modules.
+
+### Log Levels
+
+The logger supports three levels:
+
+- `info` — General application events, such as server startup and successful database connections.
+- `warn` — Unexpected conditions that do not necessarily stop the application.
+- `error` — Application errors, database failures, and unexpected server failures.
+
+### Usage
+
+Import the shared logger wherever logging is required.
+
+```javascript
+import { logger } from "../core/utils/logger.js";
+
+logger.info("Application started", {
+    port: 5000
+});
+
+logger.warn("MongoDB disconnected");
+
+logger.error("Request failed", {
+    requestId: "example-request-id",
+    statusCode: 500
+});
+```
+
+Adjust the relative import path according to the file's location.
+
+### Log Formats
+
+**Development:** Logs are formatted for readability, including the timestamp and relevant metadata.
+
+**Production:** Logs are emitted as structured JSON, making them easier for log management systems to process.
+
+### Timestamp Formatting
+
+The shared `src/core/utils/timeFormat.js` utility formats timestamps using Indian Standard Time (`Asia/Kolkata`).
+
+Example:
+
+```text
+11 Oct 2026, 05:45:30 PM IST
+```
+
+The logger uses this utility automatically. Other modules should use the shared logger instead of independently formatting timestamps or repeatedly calling console logging methods.
+
+### Logging Guidelines
+
+- Include request IDs when logging request-related errors.
+- Log relevant error details without exposing sensitive information.
+- Never log passwords, authentication tokens, database credentials, or other secrets.
+- Avoid logging request bodies or query strings by default.
+- Keep log messages concise and descriptive.
+
 
 ## API Response Format
 
