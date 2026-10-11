@@ -157,7 +157,7 @@ npm --version
 If the project is stored in a Git repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/RohanSantra/mern-backend-starter.git
 cd mern-backend-starter
 ```
 
