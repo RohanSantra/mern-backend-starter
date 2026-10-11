@@ -143,10 +143,10 @@ Install the following before running the application:
 
 Verify the installations:
 
-\`\`\`bash
+```bash
 node --version
 npm --version
-\`\`\`
+```
 
 ---
 
@@ -156,18 +156,18 @@ npm --version
 
 If the project is stored in a Git repository:
 
-\`\`\`bash
+```bash
 git clone <repository-url>
 cd mern-backend-starter
-\`\`\`
+```
 
 Alternatively, open the project directory directly in your terminal.
 
 ### 2. Install Dependencies
 
-\`\`\`bash
+```bash
 npm install
-\`\`\`
+```
 
 ### 3. Configure Environment Variables
 
@@ -175,7 +175,7 @@ Create a `.env` file in the project root using `.env.example` as the reference.
 
 Example:
 
-\`\`\`env
+```env
 NODE_ENV=development
 APP_NAME=MERN_BACKEND
 API_VERSION=v1
@@ -184,7 +184,7 @@ PORT=5000
 CLIENT_URL=http://localhost:5173
 
 MONGODB_URI=mongodb://127.0.0.1:27017/mern_backend
-\`\`\`
+```
 
 Update the values according to your local environment.
 
@@ -196,9 +196,9 @@ If you use MongoDB Atlas, replace the local connection URI with your Atlas conne
 
 ### 5. Start the Development Server
 
-\`\`\`bash
+```bash
 npm run dev
-\`\`\`
+```
 
 The server should start after the required configuration has been loaded and the database connection has been established.
 
@@ -208,10 +208,10 @@ The default port in the example configuration is `5000`.
 
 Open the following endpoints in your browser or API client:
 
-\`\`\`text
+```text
 GET http://localhost:5000/api/v1/health/live
 GET http://localhost:5000/api/v1/health/ready
-\`\`\`
+```
 
 The liveness endpoint checks whether the application is running. The readiness endpoint checks whether the application is ready to serve requests, including its database dependency.
 
@@ -250,9 +250,9 @@ The following variables are used by the base configuration.
 
 Run linting before committing changes:
 
-\`\`\`bash
+```bash
 npm run lint
-\`\`\`
+```
 
 ---
 
@@ -262,17 +262,17 @@ The starter provides endpoints for basic application health checks.
 
 ### Liveness
 
-\`\`\`http
+```http
 GET /api/v1/health/live
-\`\`\`
+```
 
 Indicates whether the application process is alive and responding.
 
 ### Readiness
 
-\`\`\`http
+```http
 GET /api/v1/health/ready
-\`\`\`
+```
 
 Checks whether the application is ready to accept requests based on its required dependencies and shutdown state.
 
@@ -286,7 +286,7 @@ These endpoints can be used by deployment platforms, monitoring systems, and con
 
 The project is organized into shared infrastructure, reusable middleware, and feature modules.
 
-\`\`\`text
+```text
 mern-backend-starter/
 ├── docs/
 │   └── PROJECT_STRUCTURE.md
@@ -318,7 +318,7 @@ mern-backend-starter/
 ├── package.json
 ├── package-lock.json
 └── README.md
-\`\`\`
+```
 
 ### Main Directories
 
@@ -345,7 +345,7 @@ For a detailed explanation of the directory structure, responsibilities, and ext
 
 A typical API request passes through the following stages:
 
-\`\`\`text
+```text
 Incoming Request
        |
        v
@@ -368,7 +368,7 @@ Standardized API Response
        |
        v
 Outgoing Response
-\`\`\`
+```
 
 If a request fails, the error is passed to the centralized error-handling middleware, which formats the response consistently.
 
@@ -382,7 +382,7 @@ Business functionality should be implemented inside `src/modules/`.
 
 For example, when adding a product-management feature:
 
-\`\`\`text
+```text
 src/
 └── modules/
     └── products/
@@ -391,7 +391,7 @@ src/
         ├── product.routes.js
         ├── product.validation.js
         └── index.js
-\`\`\`
+```
 
 This is an example structure, not a set of files that already exists.
 
@@ -443,7 +443,7 @@ Successful responses use a consistent structure.
 
 Example:
 
-\`\`\`json
+```json
 {
   "success": true,
   "statusCode": 200,
@@ -454,7 +454,7 @@ Example:
   "meta": null,
   "requestId": "example-request-id"
 }
-\`\`\`
+```
 
 Error responses follow a corresponding structure containing an error code and, when appropriate, safe error details.
 
@@ -497,9 +497,9 @@ Use integration tests to verify interactions between components, such as API rou
 
 Run:
 
-\`\`\`bash
+```bash
 npm run lint
-\`\`\`
+```
 
 Add test scripts and a testing framework when the testing setup is implemented. Do not assume that test execution is configured merely because the test directories exist.
 
@@ -512,8 +512,6 @@ The root README provides the quick-start guide and an overview of the project.
 The detailed architecture documentation is maintained separately:
 
 - **[`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)** — Directory responsibilities, core components, module organization, and extension guidelines.
-
-Keep the root README concise enough for a developer to understand the project and run it quickly. Put deeper implementation and architectural explanations in the documentation directory.
 
 ---
 
@@ -535,5 +533,3 @@ This starter follows these principles:
 ## License
 
 This project is currently licensed under the ISC license, as declared in `package.json`.
-
-Update the license and add a `LICENSE` file if you choose a different distribution model.
